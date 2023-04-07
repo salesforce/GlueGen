@@ -1,0 +1,13 @@
+librosa==0.7.2
+numpy==1.23.1
+pytorch-ignite==0.3.0
+termcolor==1.1.0
+visdom==0.1.8.9
+numba==0.45.0
+simplejpeg
+ftfy
+soundfile
+datasets
+
+# pip install -U llvmlite==0.32.1
+# pip install -e .
