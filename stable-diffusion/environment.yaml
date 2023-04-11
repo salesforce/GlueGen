@@ -1,4 +1,4 @@
-name: sdm-gluegen
+name: gluegen
 channels:
   - pytorch
   - defaults

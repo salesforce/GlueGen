@@ -76,11 +76,11 @@ This repository is for the paper:
 
 ## Instruction for GlueGen
 ### Environment Preparation
-Setup the env of stable-diffusion first.
+Setup the env of stable-diffusion first (need to wait a few minutes).
 ```
 cd ./stable-diffusion
-conda env create -f environment.yaml
-conda activate sdm
+PIP_EXISTS_ACTION=w conda env create -f environment.yaml
+conda activate gluegen
 ```
 
 Then, install the packages for audioclip (only needed for sound-to-image generation).
@@ -142,6 +142,7 @@ CUDA_VISIBLE_DEVICES=0 python -m torch.distributed.launch --nproc_per_node=1 --n
 
 Multilingual Text-to-image GlueNet Training:
 ```
+cd ./multilingual-gluenet
 CUDA_VISIBLE_DEVICES=0 python train_gluenet_multi.py --DATA_PATH_SRC ../data/WikiMatrix.en-zh.txt.en --DATA_PATH_TAR ../data/WikiMatrix.en-zh.txt.zh --DATA_PATH_SRC_1 ../data/laion-1M-trans-en-zh-cn-en.txt --DATA_PATH_TAR_1 ../data/laion-1M-trans-en-zh-cn-zh-cn.txt --tarLanguage Chinese
 ```
 
