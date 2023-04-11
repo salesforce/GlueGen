@@ -40,7 +40,7 @@ class Discriminator(nn.Module):
         )
         
 
-    def forward(self, x, eta, reverse=True):
+    def forward(self, x, eta=0.1, reverse=True):
         if reverse:
             x = grad_reverse(x, eta)
         return self.net(x)

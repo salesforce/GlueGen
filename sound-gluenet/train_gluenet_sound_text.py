@@ -8,20 +8,7 @@ from torch import cuda
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
 # import torchaudio
-
-from util.x_transformer import Encoder, TransformerWrapper, FeedForward
-from transformers import BertTokenizerFast
-
-from transformers import T5Tokenizer
-from transformers import T5Model
-from transformers import T5ForConditionalGeneration, AutoTokenizer
-
 from transformers import CLIPTokenizer, CLIPTextModel
-
-from transformers import AutoFeatureExtractor, AutoModelForCTC, Wav2Vec2ForCTC
-
-from transformers import AutoProcessor, HubertModel, Wav2Vec2Processor
-
 from rich.console import Console
 
 import numpy as np
@@ -29,48 +16,21 @@ import numpy as np
 from model import Discriminator, Translator_w_head_v0
 from dataset import CustomTextDataset
 
-from datasets import load_dataset
-import datasets
-import soundfile as sf
-
 import json
 import random
+from rich.table import Column, Table
+from rich import box
+import random
 
+from util.utils import get_dataloader
 
 console = Console(record=True)
-
-import argparse 
-parser = argparse.ArgumentParser()
-parser.add_argument("--local_rank", type=int, default=-1)
-args = parser.parse_args()
-
-import random
-def set_seed(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-
-def map_to_array(batch):
-    speech, _ = sf.read(batch["file"])
-    batch["speech"] = speech
-    return batch
-
-processor = AutoProcessor.from_pretrained("facebook/wav2vec2-base-960h")
-
-def prepare_dataset(batch):
-    audio = batch["audio"]
-    batch = processor(audio["array"], sampling_rate=audio["sampling_rate"], text=batch["text"])
-    
-    batch["input_length"] = len(audio["array"]) / audio["sampling_rate"]
-    return batch
-    
-from torch.utils.data.distributed import DistributedSampler
 
 params = {
     "TRAIN_BATCH_SIZE": 8,  # training batch size
     "TRAIN_EPOCHS": 10,  # number of training epochs
     "LEARNING_RATE": 5e-5,  # learning rate
+    "MAX_LENGTH": 77
 }
 
 
@@ -82,105 +42,6 @@ image_templates = [
     'a good photo of {}',
     'a vivid illustration of {}',
 ]
-
-
-BS = params["TRAIN_BATCH_SIZE"]
-
-os.environ["TOKENIZERS_PARALLELISM"] = "false" # Key Line
-
-torch.cuda.set_device(args.local_rank)
-device = torch.device('cuda', args.local_rank)
-
-torch.distributed.init_process_group(backend='nccl')
-
-seed = 23
-random.seed(seed)
-np.random.seed(seed)
-torch.manual_seed(seed)
-torch.cuda.manual_seed_all(seed)
-
-console.log(f"[Loading Models]...\n")
-
-version = "openai/clip-vit-large-patch14"
-srcTokenizer = CLIPTokenizer.from_pretrained(version)
-
-srcTransformer = CLIPTextModel.from_pretrained(version)
-srcTransformer = srcTransformer.to(device)
-srcTransformer.eval()
-
-srcTransformer = torch.nn.parallel.DistributedDataParallel(srcTransformer, device_ids=[args.local_rank], output_device=args.local_rank, find_unused_parameters=True)
-
-tarProcessor = []
-
-from audioclip.model import AudioCLIP
-model_path = '../checkpoints_all/audioclip_checkpoint/AudioCLIP-Full-Training.pt'
-tarModel = AudioCLIP(pretrained=model_path)
-
-
-tarModel = tarModel.to(device)
-tarModel.eval()
-
-tarModel = torch.nn.parallel.DistributedDataParallel(tarModel, device_ids=[args.local_rank], output_device=args.local_rank, find_unused_parameters=True)
-
-
-from audioclip.ignite_trainer import _utils
-import torchvision as tv
-from typing import Type
-
-def get_dataloader(config_path):
-    config = json.load(open(config_path))
-    
-    transforms = config['Transforms'] 
-
-    transforms_train = list()
-    transforms_test = list()
-
-    for idx, transform in enumerate(transforms):
-        use_train = transform.get('train', True)
-        use_test = transform.get('test', True)
-
-        transform = _utils.load_class(transform['class'])(**transform['args'])
-
-        if use_train:
-            transforms_train.append(transform)
-        if use_test:
-            transforms_test.append(transform)
-
-        transforms[idx]['train'] = use_train
-        transforms[idx]['test'] = use_test
-
-    transforms_train = tv.transforms.Compose(transforms_train)
-    transforms_test = tv.transforms.Compose(transforms_test)
-
-    dataset_class = config['Dataset']['class']
-    dataset_args = config['Dataset']['args']
-    Dataset: Type = _utils.load_class(dataset_class)
-        
-    batch_train = 8
-    batch_test = 8
-        
-    workers_train = 2
-    workers_test = 2
-
-    train_loader, eval_loader = _utils.get_data_loaders(
-        Dataset,
-        dataset_args,
-        batch_train,
-        batch_test,
-        workers_train,
-        workers_test,
-        transforms_train,
-        transforms_test
-    )
-
-    return train_loader, eval_loader
-config_path = '../stable-diffusion/audioclip/protocols/audioclip-us8k.json'
-train_loader_us8k, _ = get_dataloader(config_path)
-
-train_loader = [train_loader_us8k]
-
-from rich.table import Column, Table
-from rich import box
 
 training_logger = Table(
     Column("Epoch", justify="center"),
@@ -194,23 +55,44 @@ training_logger = Table(
     pad_edge=False,
     box=box.ASCII,
 )
-        
-console.log(f"[Data]: Reading data...\n")
 
+device = torch.device('cuda')
+
+
+console.log(f"[Loading Models]...\n")
+
+version = "openai/clip-vit-large-patch14"
+srcTokenizer = CLIPTokenizer.from_pretrained(version)
+
+srcTransformer = CLIPTextModel.from_pretrained(version)
+srcTransformer = srcTransformer.to(device)
+srcTransformer.eval()
+
+from audioclip.model import AudioCLIP
+model_path = '../checkpoints_all/audioclip_checkpoint/AudioCLIP-Full-Training.pt'
+tarModel = AudioCLIP(pretrained=model_path)
+
+
+tarModel = tarModel.to(device)
+tarModel.eval()
+
+console.log(f"[Data]: Reading data...\n")
+config_path = '../stable-diffusion/audioclip/protocols/audioclip-us8k.json'
+train_loader_us8k, _ = get_dataloader(config_path, params)
+
+train_loader = [train_loader_us8k]
 
 adapter = Translator_w_head_v0(16, 77, 64, 768, 4, 5).to(device)
 adapter_rec = Translator_w_head_v0(77, 16, 768, 64,  4, 5).to(device)
 
 adapter = adapter.to(device)
-adapter = torch.nn.parallel.DistributedDataParallel(adapter, device_ids=[args.local_rank], output_device=args.local_rank, find_unused_parameters=True)
 
 adapter_rec = adapter_rec.to(device)
-adapter_rec = torch.nn.parallel.DistributedDataParallel(adapter_rec, device_ids=[args.local_rank], output_device=args.local_rank, find_unused_parameters=True)
 
-discriminator = Discriminator(1280, 2)#.to(device)
-discriminator_token = Discriminator(1280, 2)#.to(device)
+discriminator_token = Discriminator(768, 2).to(device)
 
-parameters =  list(adapter.parameters()) + list(adapter_rec.parameters())
+parameters = list(adapter.parameters()) + \
+            list(discriminator_token.parameters()) + list(adapter_rec.parameters())
 
 optimizer = torch.optim.Adam(
         params=parameters, lr=params["LEARNING_RATE"]
@@ -219,15 +101,13 @@ optimizer = torch.optim.Adam(
 scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
 
 loss_domain = torch.nn.NLLLoss()
-# loss_domain = loss_domain.to(device)
+loss_domain = loss_domain.to(device)
 
 loss_mse = torch.nn.MSELoss(reduction='none')
 
 tensor_norm = torch.Tensor([[43.8203],[28.3668],[27.9345],[28.0084],[28.2958],[28.2576],[28.3373],[28.2695],[28.4097],[28.2790],[28.2825],[28.2807],[28.2775],[28.2708],[28.2682],[28.2624],[28.2589],[28.2611],[28.2616],[28.2639],[28.2613],[28.2566],[28.2615],[28.2665],[28.2799],[28.2885],[28.2852],[28.2863],[28.2780],[28.2818],[28.2764],[28.2532],[28.2412],[28.2336],[28.2514],[28.2734],[28.2763],[28.2977],[28.2971],[28.2948],[28.2818],[28.2676],[28.2831],[28.2890],[28.2979],[28.2999],[28.3117],[28.3363],[28.3554],[28.3626],[28.3589],[28.3597],[28.3543],[28.3660],[28.3731],[28.3717],[28.3812],[28.3753],[28.3810],[28.3777],[28.3693],[28.3713],[28.3670],[28.3691],[28.3679],[28.3624],[28.3703],[28.3703],[28.3720],[28.3594],[28.3576],[28.3562],[28.3438],[28.3376],[28.3389],[28.3433],[28.3191]]).to(device)
 
 tensor_norm_ave = (tensor_norm/tensor_norm.mean()).unsqueeze(0)
-
-word_list_unique = ['jackhammer', 'drilling', 'siren', 'car horn', 'street music', 'engine idling', 'dog bark', 'children playing', 'air conditioner', 'gun shot']
 
 word_dict = {'jackhammer': ['jackhammer', 'pneumatic drill', 'concrete breaker', 'demolition hammer'],
  'drilling': ['a machine is drilling', 'a machine is piercing', 'a machine is perforating', 'a machine is reaming'],
@@ -241,12 +121,21 @@ word_dict = {'jackhammer': ['jackhammer', 'pneumatic drill', 'concrete breaker',
  'gun shot': ['gun is shoting', 'gunfire']
 }
 
-def train_alignment(epoch, tokenizer_src, tokenizer_tar, model_src, model_tar, adapter, adapter_rec, discriminator, device, loader, optimizer, params, console):
+def train_alignment(epoch, tokenizer_src, model_src, model_tar, adapter, adapter_rec, device, loader, optimizer, params, console):
     loader_us8k = loader[0]
     len_dataloader = len(loader_us8k) # + len(loader_esc) 
     
     adapter.train()
     adapter_rec.train()
+    
+    discriminator_token.train()
+    
+    domain_label_s_tokenWise = torch.zeros(params["TRAIN_BATCH_SIZE"] * params["MAX_LENGTH"]).to(device)
+    domain_label_s_tokenWise = domain_label_s_tokenWise.long()
+
+    domain_label_t_tokenWise = torch.ones(params["TRAIN_BATCH_SIZE"] * params["MAX_LENGTH"]).to(device)
+    domain_label_t_tokenWise = domain_label_t_tokenWise.long()
+    
     
     loss_list= [0, 0, 0]
     
@@ -258,7 +147,7 @@ def train_alignment(epoch, tokenizer_src, tokenizer_tar, model_src, model_tar, a
             item = random.choice(image_templates).format(word_sel) if random.random() < 1 else word_sel
             y.append(item) 
             
-        tokens_src_raw  = tokenizer_src(y, truncation=True, max_length=77, return_length=True,
+        tokens_src_raw  = tokenizer_src(y, truncation=True, max_length=params["MAX_LENGTH"], return_length=True,
                                         return_overflowing_tokens=False, padding="max_length", return_tensors="pt")
         
         tokens_src = tokens_src_raw["input_ids"].to(device)
@@ -268,25 +157,34 @@ def train_alignment(epoch, tokenizer_src, tokenizer_tar, model_src, model_tar, a
         feat_src = feat_src_ / (tensor_norm/2) 
 
         ((feat_tar, _, _), _), _ = model_tar(audio=data[0].to(device))
-
         
         feat_tar = feat_tar.reshape(feat_tar.shape[0], 16, 1024 // 16).detach()
         
         feat_tar_ad = adapter(feat_tar)
         feat_tar_rec = adapter_rec(feat_tar_ad)
-    
+        
+        size_0, size_1, size_2 = feat_src.shape
+        
+        feat_src_tokenWise = feat_src.view(size_0 * size_1, size_2)
+        feat_tar_tokenWise = feat_tar_ad.reshape(size_0 * size_1, size_2)
+
+        pred_s_tokenWise = discriminator_token(feat_src_tokenWise)
+        pred_t_tokenWise = discriminator_token(feat_tar_tokenWise)
+
         feat_src_mean = torch.mean(feat_src_, dim=0)
         feat_src_norm = torch.mean(torch.abs(feat_src_mean - feat_src_mean[-1,:]),dim=1)
         feat_src_norm = feat_src_norm / feat_src_norm.mean()
         feat_src_norm[-1] = (feat_src_norm[-2] + feat_src_norm[-3] ) /2
         feat_src_norm = feat_src_norm.unsqueeze(0).unsqueeze(2)
         
+        loss_adv = 0.1 * (loss_domain(pred_s_tokenWise, domain_label_s_tokenWise) + loss_domain(pred_t_tokenWise, domain_label_t_tokenWise))
+        
         loss_distill = 10000 * (loss_mse(feat_tar_ad * 1, feat_src* 1) * feat_src_norm).mean() # 
         loss_rec = 10000 * (loss_mse(feat_tar_rec* 1, feat_tar* 1)).mean()
         
         loss_distill_rec = 10 * loss_mse(feat_tar_ad * (tensor_norm/2), feat_src_).mean() #
         
-        loss = loss_distill + loss_rec
+        loss = loss_distill + loss_rec + loss_adv
         
         optimizer.zero_grad()
         loss.backward()
@@ -316,11 +214,9 @@ console.log(f"[Begin Training]...\n")
 
 time_start = time.time()
 for epoch in range(params["TRAIN_EPOCHS"]):
-    train_alignment(epoch, srcTokenizer, tarProcessor, srcTransformer, tarModel, adapter, adapter_rec, discriminator, device, train_loader, optimizer, params, console)
+    train_alignment(epoch, srcTokenizer, srcTransformer, tarModel, adapter, adapter_rec, device, train_loader, optimizer, params, console)
     scheduler.step()
 
-if torch.distributed.get_rank() == 0:
-
-    PATH_ad = 'gluenet_sound2img_audioclip_us8k.ckpt'
-    adapter_to_save = adapter.module if hasattr(adapter, "module") else adapter  # Take care of distributed/parallel training
-    torch.save(adapter_to_save.state_dict(), PATH_ad)
+PATH_ad = 'gluenet_sound2img_audioclip_us8k.ckpt'
+adapter_to_save = adapter.module if hasattr(adapter, "module") else adapter  # Take care of distributed/parallel training
+torch.save(adapter_to_save.state_dict(), PATH_ad)

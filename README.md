@@ -107,6 +107,8 @@ Download the pretrained gluenet checkpoints and save them to ./checkpoints_all/g
 ### Download Datasets
 Download audio dataset (urbansound8k) to ./data as ./data/urbansound8k
 
+Download multilingual text dataset to ./data
+
 ### Running Inference Code
 Multilingual Stable Diffusion Inference:
 ```
@@ -138,6 +140,11 @@ cd ./sound-gluenet
 CUDA_VISIBLE_DEVICES=0 python -m torch.distributed.launch --nproc_per_node=1 --nnodes=1 train_gluenet_sound_text.py
 ```
 
+Multilingual Text-to-image GlueNet Training:
+```
+CUDA_VISIBLE_DEVICES=0 python train_gluenet_multi.py --DATA_PATH_SRC ../data/WikiMatrix.en-zh.txt.en --DATA_PATH_TAR ../data/WikiMatrix.en-zh.txt.zh --DATA_PATH_SRC_1 ../data/laion-1M-trans-en-zh-cn-en.txt --DATA_PATH_TAR_1 ../data/laion-1M-trans-en-zh-cn-zh-cn.txt --tarLanguage Chinese
+```
+
 ## Citation
 If you find this project useful for your research, please kindly cite our paper:
 
@@ -155,5 +162,6 @@ If you have any questions, please contact [Can Qin](qin.ca@northeastern.edu).
 
 ## Acknowledgement
 Stable Diffusion https://github.com/CompVis/stable-diffusion
+
 AudioCLIP https://github.com/AndreyGuzhov/AudioCLIP
 
