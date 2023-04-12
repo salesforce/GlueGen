@@ -88,13 +88,14 @@ Then, install the packages for audioclip (only needed for sound-to-image generat
 cd ./stable-diffusion/audioclip
 pip install -r requirements.txt
 pip install -U llvmlite==0.32.1
+pip install -e .
 ```
 
 
 ### Download Checkpoints
 Download the official checkpoints of SD v1 to ./checkpoints_all/checkpoint_sd_v1 as ./checkpoints_all/checkpoint_sd_v1/v1-5-pruned-emaonly.ckpt (from https://huggingface.co/runwayml/stable-diffusion-v1-5).
 
-Then follow the README.md (./stable-diffusion/audioclip/README.md) of audioclip to download checkpoints  to ./checkpoints_all/audioclip_checkpoint as  ./checkpoints_all/audioclip_checkpoint/AudioCLIP-Full-Training.pt.
+Then follow the README.md (`./stable-diffusion/audioclip/README.md`) of audioclip to download checkpoints  to `./checkpoints_all/audioclip_checkpoint` as  `./checkpoints_all/audioclip_checkpoint/AudioCLIP-Full-Training.pt`.
 
 ```
 mkdir ./checkpoints_all/audioclip_checkpoint
@@ -105,9 +106,9 @@ wget https://github.com/AndreyGuzhov/AudioCLIP/releases/download/v0.1/AudioCLIP-
 Download the pretrained gluenet checkpoints and save them to ./checkpoints_all/gluenet_checkpoint
 
 ### Download Datasets
-Download audio dataset (urbansound8k) to ./data as ./data/urbansound8k
+Download audio dataset (urbansound8k) to `./data` as `./data/urbansound8k`
 
-Download multilingual text dataset to ./data
+Download multilingual text dataset to `./data`
 
 ### Running Inference Code
 Multilingual Stable Diffusion Inference:
@@ -137,7 +138,7 @@ python scripts/sound2img_gluegen.py --plms --ckpt ../checkpoints_all/checkpoint_
 Sound-to-image GlueNet Training:
 ```
 cd ./sound-gluenet
-CUDA_VISIBLE_DEVICES=0 python -m torch.distributed.launch --nproc_per_node=1 --nnodes=1 train_gluenet_sound_text.py
+CUDA_VISIBLE_DEVICES=0 python train_gluenet_sound_text.py
 ```
 
 Multilingual Text-to-image GlueNet Training:
