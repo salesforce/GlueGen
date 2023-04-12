@@ -83,7 +83,7 @@ PIP_EXISTS_ACTION=w conda env create -f environment.yaml
 conda activate gluegen
 ```
 
-Then, install the packages for audioclip (only needed for sound-to-image generation).
+Then, install the packages for audioclip.
 ```
 cd ./stable-diffusion/audioclip
 pip install -r requirements.txt
