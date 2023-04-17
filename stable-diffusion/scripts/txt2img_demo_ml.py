@@ -18,7 +18,7 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
-# from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
+from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 
 import pdb
@@ -27,7 +27,7 @@ from googletrans import Translator
 # load safety model
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
-# safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
 
 def chunk(it, size):
@@ -86,14 +86,14 @@ def load_replacement(x):
         return x
 
 
-# def check_safety(x_image):
-#     safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
-#     x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
-#     assert x_checked_image.shape[0] == len(has_nsfw_concept)
-#     for i in range(len(has_nsfw_concept)):
-#         if has_nsfw_concept[i]:
-#             x_checked_image[i] = load_replacement(x_checked_image[i])
-#     return x_checked_image, has_nsfw_concept
+def check_safety(x_image):
+    safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
+    x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
+    assert x_checked_image.shape[0] == len(has_nsfw_concept)
+    for i in range(len(has_nsfw_concept)):
+        if has_nsfw_concept[i]:
+            x_checked_image[i] = load_replacement(x_checked_image[i])
+    return x_checked_image, has_nsfw_concept
 
 
 def main():
@@ -289,9 +289,6 @@ def main():
                 all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
                     for prompts in tqdm(data, desc="data"):
-#                         for idx, prompt in enumerate(prompts):
-#                             language = translator.detect(prompt)
-#                             prompts[idx] = prompt + '__' + dic_lang[language.lang]
                         language = translator.detect(prompts[0])
                         try:
                             prompts[0] = prompt + '__' + dic_lang[language.lang]
@@ -321,8 +318,8 @@ def main():
                         x_samples_ddim = model.decode_first_stage(samples_ddim)
                         x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                         x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
-                        x_checked_image = x_samples_ddim 
-#                         x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
+#                         x_checked_image = x_samples_ddim 
+                        x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
 
                         x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
 

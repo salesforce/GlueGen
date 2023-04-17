@@ -103,12 +103,21 @@ cd ./checkpoints_all/audioclip_checkpoint
 wget https://github.com/AndreyGuzhov/AudioCLIP/releases/download/v0.1/AudioCLIP-Full-Training.pt
 ```
 
-Download the pretrained gluenet checkpoints and save them to ./checkpoints_all/gluenet_checkpoint
+Then download the pretrained gluenet checkpoints and save them to `./checkpoints_all/gluenet_checkpoint`:
+```
+bash download_gluenet_checkpoints.sh
+```
+
 
 ### Download Datasets
 Download audio dataset (urbansound8k) to `./data` as `./data/urbansound8k`
-
+```
+bash download_us8k_data.sh
+```
 Download multilingual text dataset to `./data`
+```
+bash download_multilingual_data.sh
+```
 
 ### Running Inference Code
 Multilingual Stable Diffusion Inference:

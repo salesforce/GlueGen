@@ -18,7 +18,7 @@ from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
 
-# from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
+from diffusers.pipelines.stable_diffusion.safety_checker import StableDiffusionSafetyChecker
 from transformers import AutoFeatureExtractor
 
 import pdb
@@ -33,7 +33,7 @@ import random
 # load safety model
 safety_model_id = "CompVis/stable-diffusion-safety-checker"
 safety_feature_extractor = AutoFeatureExtractor.from_pretrained(safety_model_id)
-# safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
+safety_checker = StableDiffusionSafetyChecker.from_pretrained(safety_model_id)
 
 
 def chunk(it, size):
@@ -212,14 +212,14 @@ def load_replacement(x):
         return x
 
 
-# def check_safety(x_image):
-#     safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
-#     x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
-#     assert x_checked_image.shape[0] == len(has_nsfw_concept)
-#     for i in range(len(has_nsfw_concept)):
-#         if has_nsfw_concept[i]:
-#             x_checked_image[i] = load_replacement(x_checked_image[i])
-#     return x_checked_image, has_nsfw_concept
+def check_safety(x_image):
+    safety_checker_input = safety_feature_extractor(numpy_to_pil(x_image), return_tensors="pt")
+    x_checked_image, has_nsfw_concept = safety_checker(images=x_image, clip_input=safety_checker_input.pixel_values)
+    assert x_checked_image.shape[0] == len(has_nsfw_concept)
+    for i in range(len(has_nsfw_concept)):
+        if has_nsfw_concept[i]:
+            x_checked_image[i] = load_replacement(x_checked_image[i])
+    return x_checked_image, has_nsfw_concept
 
 
 def main():
@@ -390,52 +390,13 @@ def main():
     wm_encoder = WatermarkEncoder()
     wm_encoder.set_watermark('bytes', wm.encode('utf-8'))
 
-    
-   
-#     if not opt.from_file:
-#         prompt = opt.prompt
-#         assert prompt is not None
-#         data = [batch_size * [prompt]]
-
-#     else:
-#         print(f"reading prompts from {opt.from_file}")
-#         with open(opt.from_file, "r") as f:
-#             data = f.read().splitlines()
-#             data = list(chunk(data, batch_size))
     audioclip_path = opt.audioclip_ckpt #'AudioCLIP-Full-Training.pt'
     aclp = AudioCLIP(pretrained=audioclip_path)#AudioCLIP(pretrained=f'audioclip/assets/{MODEL_FILENAME}')
     
-#     MODEL_FILENAME = 'AudioCLIP-Full-Training.pt'
-#     aclp = AudioCLIP(pretrained=f'audioclip/assets/{MODEL_FILENAME}')
-#     paths_to_audio = glob.glob('./audioclip/demo/audio_s2/*.wav')
-    
-    # ['./audioclip/demo/audio/car_horn_1-24074-A-43.wav', './audioclip/demo/audio/thunder_3-144891-B-19.wav', './audioclip/demo/audio/coughing_1-58792-A-24.wav', './audioclip/demo/audio/cat_3-95694-A-5.wav', './audioclip/demo/audio/alarm_clock_3-120526-B-37.wav']
-    
-    # ['./audioclip/demo/audio_s1/5-257349-A-15.wav', './audioclip/demo/audio_s1/5-195557-A-19.wav', './audioclip/demo/audio_s1/2-122820-B-36.wav', './audioclip/demo/audio_s1/1-115920-A-22.wav', './audioclip/demo/audio_s1/1-172649-C-40.wav']
     
     batch_size = 1
-#     batch_size = len(paths_to_audio) #opt.n_samples
     n_rows = opt.n_rows if opt.n_rows > 0 else batch_size
-    
-#     SAMPLE_RATE = 44100
-#     audio = list()
-#     for path_to_audio in paths_to_audio:
-#         track, _ = librosa.load(path_to_audio, sr=SAMPLE_RATE, dtype=np.float32)
-
-#         # compute spectrograms using trained audio-head (fbsp-layer of ESResNeXt)
-#         # thus, the actual time-frequency representation will be visualized
-#         spec = aclp.audio.spectrogram(torch.from_numpy(track.reshape(1, 1, -1)))
-#         spec = np.ascontiguousarray(spec.detach().numpy()).view(np.complex64)
-#         pow_spec = 10 * np.log10(np.abs(spec) ** 2 + 1e-18).squeeze()
-
-#         audio.append((track, pow_spec))
- 
-#     audio_transforms = ToTensor1D()
-#     audio = torch.stack([audio_transforms(track.reshape(1, -1)) for track, _ in audio])
-#     data = [audio]
-    
-#     word_list_unique = ['air conditioner', 'car horn', 'children playing', 'dog bark', 'drilling', 'engine idling', 'gun shot', 'jackhammer', 'siren', 'street music']
-    
+       
     word_list_unique = {
          0: 'air conditioner', 
          1: 'car horn', 
@@ -477,16 +438,10 @@ def main():
                         uc = None
                         if opt.scale != 1.0:
                             uc = model.get_learned_conditioning(batch_size * [""])
-#                         if isinstance(prompts, tuple):
-#                             prompts = list(prompts)
-#                         c = model.get_learned_conditioning(prompts)
-                        
                         c = model.get_learned_conditioning(prompts[0][:,:,:]) # prompts.to(device)
                         word_txt = random.choice(word_text_list)
                         c_txt = model.get_learned_conditioning(word_txt)
                         
-#                         c_in = (c + c_txt) #/ 2
-#                         pdb.set_trace()
                         for i_signal in range(3, 8):
                             c_salient = torch.cat((c[:,:i_signal, :], c_txt[:, :i_signal,:]), dim=1)
                             c_back = (c[:,i_signal*2:, :] + c_txt[:, i_signal*2:,:])/2
@@ -508,12 +463,10 @@ def main():
                             x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
                             x_samples_ddim = x_samples_ddim.cpu().permute(0, 2, 3, 1).numpy()
 
-    #                         x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
-                            x_checked_image = x_samples_ddim
+                            x_checked_image, has_nsfw_concept = check_safety(x_samples_ddim)
+#                             x_checked_image = x_samples_ddim
                             x_checked_image_torch = torch.from_numpy(x_checked_image).permute(0, 3, 1, 2)
 
-    #                         x_checked_image_torch = torch.from_numpy(x_samples_ddim).permute(0, 3, 1, 2)
-    #                         pdb.set_trace()
                             if not opt.skip_save:
                                 idx = 0
                                 for x_sample in x_checked_image_torch:
@@ -521,7 +474,6 @@ def main():
                                     img = Image.fromarray(x_sample.astype(np.uint8))
                                     img = put_watermark(img, wm_encoder)
                                     sound_name = prompts[2][idx][:][0].replace(' ', '-') 
-#                                     img.save(os.path.join(sample_path, f"{base_count:05}-" + sound_name + '-' + word_txt + ".png"))
                                     word_txt_save = word_txt.replace(' ', '-')
                                     sound_name_save = sound_name.replace(' ', '-')
                                     sound_idx = prompts[2][idx][:][1].split('.')[0]
