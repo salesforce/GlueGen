@@ -27,3 +27,4 @@ utils/transforms.py
 utils/datasets/__init__.py
 utils/datasets/esc50.py
 utils/datasets/us8k.py
+utils/datasets/us8k_demo.py
