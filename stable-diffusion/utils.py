@@ -1,3 +1,11 @@
+"""
+ * Copyright (c) 2023 Salesforce, Inc.
+ * All rights reserved.
+ * SPDX-License-Identifier: Apache License 2.0
+ * For full license text, see LICENSE.txt file in the repo root or http://www.apache.org/licenses/
+ * By Can Qin
+"""
+
 import os
 import torch
 from torchvision import transforms
@@ -5,8 +13,6 @@ from data_coco_prepare import Imagelists_COCO
 from data_laion_prepare import Imagelists_LAION
 from torch.utils.data import Dataset
 import json
-
-import pdb
 
 class ResizeImage():
     def __init__(self, size):
@@ -20,8 +26,6 @@ class ResizeImage():
         return img.resize((th, tw))
     
 def return_dataset(img_path, root, config):
-#     img_path = 'coco-tr-pseudo-ldm-ddim50-s5-eta0'
-#     root = 'outputs'
     img_TF = transforms.Compose([ResizeImage(256), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
     
     
@@ -37,27 +41,6 @@ def return_dataset(img_path, root, config):
                                                 drop_last=True)
     return data_loader
 
-# def return_dataset_laion(img_path, root, config):
-# #     img_path = 'coco-tr-pseudo-ldm-ddim50-s5-eta0'
-# #     root = 'outputs'
-# #     img_TF = transforms.Compose([transforms.RandomResizedCrop(256), transforms.RandomHorizontalFlip(), transforms.ToTensor(),  transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-# #     img_TF = transforms.Compose([transforms.RandomResizedCrop(size=256, scale=(0.8, 1.0)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
-#     img_TF = transforms.Compose([transforms.RandomResizedCrop(size=256, scale=(0.9, 1.0)), transforms.ToTensor()])
-    
-#     dataset = Imagelists_LAION(img_path, root=root, transform=img_TF)
-    
-#     print("%d sample in this dataset" % len(dataset))
-    
-#     bs = config.data.params.batch_size
-    
-#     data_loader = torch.utils.data.DataLoader(dataset, batch_size=bs,
-#                                                 num_workers=config.data.params.num_workers, shuffle=True,
-#                                                 drop_last=False, pin_memory=True)
-    
-# #     data_loader = torch.utils.data.DataLoader(dataset, batch_size=bs,
-# #                                                 num_workers=config.data.params.num_workers, shuffle=True,
-# #                                                 drop_last=False, pin_memory=False, timeout=100)
-#     return data_loader
 
 import webdataset as wds
 from torch.utils.data.dataloader import default_collate
@@ -124,8 +107,6 @@ def return_dataset_laion(img_path, root, config):
     
     dataset = LaionDataset(vis_processor=img_TF, text_processor=lambda x: x, location="/export/laion2b-data/laion2B-multi/data/part-00000/{00000..01743}.tar")
     
-    # "/export/laion2b-data/laion2B-multi/data/part-00000/{00000..01743}.tar"
-    
     print("%d sample in this dataset" % len(dataset))
     
     bs = config.data.params.batch_size
@@ -133,22 +114,12 @@ def return_dataset_laion(img_path, root, config):
     data_loader = torch.utils.data.DataLoader(dataset.inner_dataset, batch_size=bs,
                                                 num_workers=config.data.params.num_workers, shuffle=False,
                                                 drop_last=False, pin_memory=True)
-    
-#     from torchvision import transforms
 
-#     def to_image_text_pair(sample):
-#         return sample[0], sample[1]["caption"]
-
-    
     return data_loader
 
 
 class capfilt_dataset(Dataset):
     def __init__(self, ann_path, transform):
-#         self.ann = []
-#         for file in ann_file:
-#             print("loading %s" % file)
-#             self.ann += json.load(open(file, "r"))
         f = open(ann_path,'r')
         self.ann = json.load(f)
         print("loading %s" % len(self.ann))
@@ -174,7 +145,6 @@ class capfilt_dataset(Dataset):
         return data
     
 def return_dataset_laion_all(img_path, config):
-#     transform = transforms.Compose([transforms.RandomResizedCrop(size=256, scale=(0.8, 1.0)), transforms.RandomHorizontalFlip(), transforms.ToTensor()])
     transform = transforms.Compose([transforms.RandomResizedCrop(size=256, scale=(0.9, 1.0)), transforms.ToTensor()])
     dataset = capfilt_dataset(img_path, transform)
     
@@ -185,8 +155,4 @@ def return_dataset_laion_all(img_path, config):
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=bs,
                                                 num_workers=config.data.params.num_workers, shuffle=True,
                                                 drop_last=False, pin_memory=False)
-    
-#     data_loader = torch.utils.data.DataLoader(dataset, batch_size=bs,
-#                                                 num_workers=config.data.params.num_workers, shuffle=True,
-#                                                 drop_last=False, pin_memory=False, timeout=100)
     return data_loader

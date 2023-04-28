@@ -1,4 +1,14 @@
-"""shout-out to https://github.com/lucidrains/x-transformers/tree/main/x_transformers"""
+"""
+ * Copyright (c) 2023 Salesforce, Inc.
+ * All rights reserved.
+ * SPDX-License-Identifier: Apache License 2.0
+ * For full license text, see LICENSE.txt file in the repo root or http://www.apache.org/licenses/
+ * By Can Qin
+ 
+ * Redistributed from repo: https://github.com/lucidrains/x-transformers/tree/main/x_transformers
+ * Copyright (c) 2020 Phil Wang.  MIT License.
+"""
+
 import torch
 from torch import nn, einsum
 import torch.nn.functional as F
@@ -10,6 +20,7 @@ from einops import rearrange, repeat, reduce
 import pdb
 # constants
 
+#----------------------------------------------------------------------------
 DEFAULT_DIM_HEAD = 64
 
 Intermediates = namedtuple('Intermediates', [

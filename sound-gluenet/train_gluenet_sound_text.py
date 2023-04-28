@@ -1,3 +1,10 @@
+'''
+ * Copyright (c) 2023 Salesforce, Inc.
+ * All rights reserved.
+ * SPDX-License-Identifier: Apache License 2.0
+ * For full license text, see LICENSE.txt file in the repo root or http://www.apache.org/licenses/
+ * By Can Qin
+'''
 import os
 import pandas as pd
 import pdb
@@ -7,14 +14,12 @@ import torch
 from torch import cuda
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
-# import torchaudio
 from transformers import CLIPTokenizer, CLIPTextModel
 from rich.console import Console
 
 import numpy as np
 
 from model import Discriminator, Translator_w_head_v0
-from dataset import CustomTextDataset
 
 import json
 import random
@@ -23,6 +28,8 @@ from rich import box
 import random
 
 from util.utils import get_dataloader
+
+#----------------------------------------------------------------------------
 
 console = Console(record=True)
 

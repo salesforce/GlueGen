@@ -1,9 +1,17 @@
+"""
+ * Copyright (c) 2023 Salesforce, Inc.
+ * All rights reserved.
+ * SPDX-License-Identifier: Apache License 2.0
+ * For full license text, see LICENSE.txt file in the repo root or http://www.apache.org/licenses/
+ * By Can Qin
+"""
+
 import pdb
 
 import torch 
 import torch.nn as nn
 from ldm.modules.x_transformer import AttentionLayers
-
+#----------------------------------------------------------------------------
 class translator_base(nn.Module):
     def __init__(self, num_tok, dim, dim_out, mult=2):
         super().__init__()

@@ -1,4 +1,10 @@
-import pdb
+'''
+ * Copyright (c) 2023 Salesforce, Inc.
+ * All rights reserved.
+ * SPDX-License-Identifier: Apache License 2.0
+ * For full license text, see LICENSE.txt file in the repo root or http://www.apache.org/licenses/
+ * By Can Qin
+'''
 
 import torch 
 import torch.nn as nn
@@ -6,6 +12,8 @@ import torch.nn as nn
 from torch.autograd import Function
 from util.x_transformer import AttentionLayers
 
+
+#----------------------------------------------------------------------------
 def count_parameters(model, grad_flag=False):
     if grad_flag:
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -39,7 +47,6 @@ class Discriminator(nn.Module):
             nn.LogSoftmax(dim=1)
         )
         
-
     def forward(self, x, eta=0.1, reverse=True):
         if reverse:
             x = grad_reverse(x, eta)
@@ -126,19 +133,14 @@ class translator_base_v1(nn.Module):
 
     def forward(self, x):
         if self.dim_in == self.dim_out:
-            
             x = x.transpose(1,2)
             indentity_0 = x
             x = self.net_tok(x)
             x += indentity_0
             x = x.transpose(1,2)
-            
             indentity_1 = x
-
-            x = self.net_sen(x)
-            
+            x = self.net_sen(x) 
             x += indentity_1
-           
         else:
             x = x.transpose(1,2)
             x = self.net_sen(x)
@@ -155,25 +157,19 @@ class translator_base_noln(nn.Module):
 
         self.net_tok = nn.Sequential(
             nn.Linear(num_tok, int(num_tok * mult)),
-#             nn.LayerNorm(int(num_tok * mult)),
             nn.GELU(),
             nn.Linear(int(num_tok * mult), int(num_tok * mult)),
-#             nn.LayerNorm(int(num_tok * mult)),
             nn.GELU(),
             nn.Linear(int(num_tok * mult), num_tok),
-#             nn.LayerNorm(num_tok),
             
         )
         
         self.net_sen = nn.Sequential(
             nn.Linear(dim, int(dim * mult)),
-#             nn.LayerNorm(int(dim * mult)),
             nn.GELU(),
             nn.Linear(int(dim * mult), int(dim * mult)),
-#             nn.LayerNorm(int(dim * mult)),
             nn.GELU(),
             nn.Linear(int(dim * mult), dim_out),
-#             nn.LayerNorm(dim_out)
         )
 
     def forward(self, x):
@@ -309,9 +305,7 @@ class translator_clip(nn.Module):
             x += indentity_1
             x = x.transpose(1,2)
         else:
-#             indentity_0 = x
             x = self.net_sen(x)
-#             x += indentity_0
             x = x.transpose(1,2)
 
             x = self.net_tok(x)
@@ -365,9 +359,7 @@ class translator_clip_atm(nn.Module):
             x += indentity_1
             x = x.transpose(1,2)
         else:
-#             indentity_0 = x
             x = self.net_sen(x)
-#             x += indentity_0
             x = x.transpose(1,2)
 
             x = self.net_tok(x)
@@ -377,9 +369,6 @@ class translator_clip_atm(nn.Module):
 class Translator_clip(nn.Module):
     def __init__(self, num_tok, dim, dim_out, mult=2, depth=5):
         super().__init__()
-        
-#         self.head = translator_base(num_tok, dim, dim, mult=2)
-        
         self.blocks = nn.ModuleList(
             [translator_base(num_tok, dim, dim, mult=2)
                 for d in range(depth)]
@@ -389,7 +378,6 @@ class Translator_clip(nn.Module):
         self.tail = translator_clip(num_tok, dim, dim_out, mult=2)
         
     def forward(self, x):
-        
         for block in self.blocks:
             x = block(x) + x
             x = self.gelu(x)
@@ -407,7 +395,6 @@ class Translator_encoder(nn.Module):
                 for d in range(depth)]
         )
         self.gelu = nn.GELU()
-
         self.tail = translator_clip(num_tok, dim, dim_out, mult=2)
         
     def forward(self, x):
@@ -428,7 +415,6 @@ class Translator_clip_atm(nn.Module):
                 for d in range(depth)]
         )
         self.gelu = nn.GELU()
-
         self.tail = translator_clip_atm(num_tok, dim, dim_out, mult=2)
         
     def forward(self, x):
@@ -489,12 +475,9 @@ class Translator_difftok_head(nn.Module):
         )
         
         self.tail = translator_base(num_tok_out, dim_out, dim_out, mult=2)
-
         self.gelu = nn.GELU()
-
         
     def forward(self, x):
-        
         x = self.head(x)
         
         for block in self.blocks:
@@ -507,9 +490,6 @@ class Translator_difftok_head(nn.Module):
 class Translator_difftok_tail(nn.Module):
     def __init__(self, num_tok, num_tok_out, dim, dim_out, mult=2, depth=5):
         super().__init__()
-        
-#         self.head = translator_base(num_tok, dim, dim, mult=2)
-        
         self.blocks = nn.ModuleList(
             [translator_base(num_tok, dim, dim, mult=2)
                 for d in range(depth)]
@@ -578,13 +558,10 @@ class translator_tok_dim(nn.Module):
         else:
             self.net_tok = nn.Sequential(
                 nn.Linear(self.tok_in, int(self.tok_in * mult)),
-                #nn.LayerNorm(int(self.tok_in * mult)),
                 nn.GELU(),
                 nn.Linear(int(self.tok_in * mult), int(self.tok_in * mult)),
-                #nn.LayerNorm(int(self.tok_in * mult)),
                 nn.GELU(),
                 nn.Linear(int(self.tok_in * mult), self.tok_out),
-                #nn.LayerNorm(self.tok_out),
 
             )
         if last_ln == True:
@@ -601,14 +578,11 @@ class translator_tok_dim(nn.Module):
         else:
             self.net_sen = nn.Sequential(
                 nn.Linear(self.dim_in, int(self.dim_in * mult)),
-#                 nn.LayerNorm(int(self.dim_in * mult)),
                 nn.GELU(),
                 nn.Linear(int(self.dim_in * mult), int(self.dim_in * mult)),
-#                 nn.LayerNorm(int(self.dim_in * mult)),
                 nn.GELU(),
                 nn.Linear(int(self.dim_in * mult), self.dim_out),
                 nn.GELU(),
-#                 nn.LayerNorm(self.dim_out)
             )
 
     def forward(self, x, residual=None ):
@@ -673,14 +647,11 @@ class translator_tok_dim_v1(nn.Module):
         else:
             self.net_sen = nn.Sequential(
                 nn.Linear(self.dim_in, int(self.dim_in * mult)),
-#                 nn.LayerNorm(int(self.dim_in * mult)),
                 nn.GELU(),
                 nn.Linear(int(self.dim_in * mult), int(self.dim_in * mult)),
-#                 nn.LayerNorm(int(self.dim_in * mult)),
                 nn.GELU(),
                 nn.Linear(int(self.dim_in * mult), self.dim_out),
                 nn.GELU(),
-#                 nn.LayerNorm(self.dim_out)
             )
 
     def forward(self, x):
@@ -708,11 +679,8 @@ class Translator_w_head(nn.Module):
         )
         
         self.gelu = nn.GELU()
-#         self.tail = translator_clip(num_tok_out, dim, dim_out, mult=2)
         
     def forward(self, x):
-#         x = self.head(x)
-        
         for block in self.in_blocks:
             x = block(x) + x
             x = self.gelu(x)

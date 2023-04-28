@@ -176,3 +176,4 @@ Stable Diffusion https://github.com/CompVis/stable-diffusion
 
 AudioCLIP https://github.com/AndreyGuzhov/AudioCLIP
 
+WikiMatrix https://github.com/facebookresearch/LASER/tree/main/tasks/WikiMatrix

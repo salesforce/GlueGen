@@ -1,7 +1,20 @@
+'''
+ * Copyright (c) 2023 Salesforce, Inc.
+ * All rights reserved.
+ * SPDX-License-Identifier: Apache License 2.0
+ * For full license text, see LICENSE.txt file in the repo root or http://www.apache.org/licenses/
+ * By Can Qin
+ 
+ * Redistributed from repo: https://github.com/AndreyGuzhov/AudioCLIP
+ * Copyright (c) 2021 Andrey Guzhov. MIT License
+'''
+
 from audioclip.ignite_trainer import _utils
 import torchvision as tv
 from typing import Type
 import json
+
+#----------------------------------------------------------------------------
 
 def get_dataloader(config_path, params):
     config = json.load(open(config_path))
