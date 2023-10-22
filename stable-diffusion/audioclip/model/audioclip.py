@@ -96,7 +96,7 @@ class AudioCLIP(CLIP):
         self.logit_scale_at = torch.nn.Parameter(torch.log(torch.ones([]) * 100))
 
         if isinstance(self.pretrained, str):
-            self.load_state_dict(torch.load(self.pretrained, map_location='cpu'), strict=False)
+            self.load_state_dict(torch.load('checkpoints_all/audioclip_checkpoint/AudioCLIP-Full-Training.pt', map_location='cpu'), strict=False)
         elif self.pretrained:
             self.load_state_dict(torch.load(
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'assets', 'CLIP.pt'),

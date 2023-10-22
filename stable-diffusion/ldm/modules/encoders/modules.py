@@ -326,8 +326,8 @@ class FrozenAudioCLIPEmbedder(nn.Module):
         super().__init__()
         
         self.model = AudioCLIP(pretrained='../checkpoints_all/audioclip_checkpoint/AudioCLIP-Full-Training.pt')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.device = device
-        
         self.adapter = Translator_w_head(16, 77, 64, 768, 4, 5) #.to(device)
         
         path_ad = '../checkpoints_all/gluenet_checkpoint/gluenet_sound2img_audioclip_us8k.ckpt'
