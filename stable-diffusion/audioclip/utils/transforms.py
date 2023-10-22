@@ -5,9 +5,7 @@ import numpy as np
 import torch
 import torchvision as tv
 
-import ignite_trainer as it
-
-
+import audioclip.ignite_trainer._trainer as it
 def scale(old_value, old_min, old_max, new_min, new_max):
     old_range = (old_max - old_min)
     new_range = (new_max - new_min)
@@ -68,8 +66,7 @@ class ToTensor1D(tv.transforms.ToTensor):
 
         return tensor_2d.squeeze_(0)
 
-
-class RandomFlip(it.AbstractTransform):
+class RandomFlip(it._interfaces.AbstractTransform):
 
     def __init__(self, p: float = 0.5):
         super(RandomFlip, self).__init__()
@@ -87,7 +84,7 @@ class RandomFlip(it.AbstractTransform):
         return x
 
 
-class RandomScale(it.AbstractTransform):
+class RandomScale(it._interfaces.AbstractTransform):
 
     def __init__(self, max_scale: float = 1.25):
         super(RandomScale, self).__init__()
@@ -111,7 +108,7 @@ class RandomScale(it.AbstractTransform):
         return self.random_scale(self.max_scale, x)
 
 
-class RandomCrop(it.AbstractTransform):
+class RandomCrop(it._interfaces.AbstractTransform):
 
     def __init__(self, out_len: int = 44100, train: bool = True):
         super(RandomCrop, self).__init__()
@@ -142,7 +139,7 @@ class RandomCrop(it.AbstractTransform):
         return self.random_crop(x) if x.shape[-1] > self.out_len else x
 
 
-class RandomPadding(it.AbstractTransform):
+class RandomPadding(it._interfaces.AbstractTransform):
 
     def __init__(self, out_len: int = 88200, train: bool = True):
         super(RandomPadding, self).__init__()
@@ -172,7 +169,7 @@ class RandomPadding(it.AbstractTransform):
         return self.random_pad(x) if x.shape[-1] < self.out_len else x
 
 
-class RandomNoise(it.AbstractTransform):
+class RandomNoise(it._interfaces.AbstractTransform):
 
     def __init__(self, snr_min_db: float = -10.0, snr_max_db: float = 100.0, p: float = 0.5):
         super(RandomNoise, self).__init__()

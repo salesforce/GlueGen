@@ -29,9 +29,9 @@ from termcolor import colored
 from collections import defaultdict
 from collections.abc import Iterable
 
-from ignite_trainer import _utils
-from ignite_trainer import _visdom
-from ignite_trainer import _interfaces
+from . import _utils
+from . import _visdom
+from . import _interfaces
 
 import pdb
 

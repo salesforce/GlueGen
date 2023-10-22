@@ -8,7 +8,8 @@ import torch.nn.functional as F
 
 import torchvision as tv
 
-import ignite_trainer as it
+# import ignite_trainer as it
+import audioclip.ignite_trainer._trainer as it
 
 from audioclip.model.esresnet import attention
 from audioclip.utils.transforms import scale
@@ -165,7 +166,7 @@ class Bottleneck(torch.nn.Module):
         return out
 
 
-class ResNetWithAttention(it.AbstractNet):
+class ResNetWithAttention(it._interfaces.AbstractNet):
 
     """
     CREDITS: https://github.com/pytorch/vision
